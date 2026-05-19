@@ -176,7 +176,9 @@ pub fn set_modes() -> Result<()> {
     keyboard_modes::enable_keyboard_enhancement();
 
     let _ = execute!(stdout(), EnableFocusChange);
-    let _ = execute!(stdout(), EnableMouseCapture);
+    if std::env::var_os("CODEX_TUI_MOUSE").is_some() {
+        let _ = execute!(stdout(), EnableMouseCapture);
+    }
     Ok(())
 }
 

@@ -1,0 +1,34 @@
+name: Codex Pro CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  rust:
+    name: Rust format and build
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: codex-rs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.93.0
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libssl-dev
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Check Codex CLI
+        env:
+          CARGO_BUILD_JOBS: "2"
+        run: cargo check -p codex-cli --bin codex
