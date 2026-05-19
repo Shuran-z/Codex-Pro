@@ -120,9 +120,17 @@ pub(crate) struct ConnectorsSnapshot {
 pub(crate) enum RateLimitRefreshOrigin {
     /// Eagerly fetched after bootstrap so the first `/status` already has data.
     StartupPrefetch,
+    /// Periodic background refresh used by status-line quota displays.
+    PeriodicRefresh,
     /// User-initiated via `/status`; the `request_id` correlates with the
     /// status card that should be updated when the fetch completes.
     StatusCommand { request_id: u64 },
+}
+
+impl RateLimitRefreshOrigin {
+    pub(crate) fn is_background(self) -> bool {
+        matches!(self, Self::StartupPrefetch | Self::PeriodicRefresh)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

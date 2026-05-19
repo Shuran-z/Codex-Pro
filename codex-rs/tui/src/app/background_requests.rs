@@ -48,6 +48,13 @@ impl App {
         app_server: &AppServerSession,
         origin: RateLimitRefreshOrigin,
     ) {
+        if origin.is_background() {
+            if self.rate_limit_background_refresh_pending {
+                return;
+            }
+            self.rate_limit_background_refresh_pending = true;
+        }
+
         let request_handle = app_server.request_handle();
         let app_event_tx = self.app_event_tx.clone();
         tokio::spawn(async move {

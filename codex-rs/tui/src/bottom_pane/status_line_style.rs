@@ -71,7 +71,15 @@ impl StatusLineAccent {
         match self {
             Self::Model | Self::State | Self::Metadata | Self::Mode => Style::default().cyan(),
             Self::Path | Self::Usage | Self::Progress => Style::default().green(),
-            Self::Branch | Self::Limit | Self::Thread => Style::default().magenta(),
+            Self::Branch | Self::Thread => Style::default().magenta(),
+            Self::Limit => Style::default().blue(),
+        }
+    }
+
+    fn forced_style(self) -> Option<Style> {
+        match self {
+            Self::Limit => Some(Style::default().blue()),
+            _ => None,
         }
     }
 }
@@ -104,9 +112,11 @@ where
         }
         let style = if use_theme_colors {
             let accent = StatusLineAccent::for_item(item);
-            soften_status_line_style(
-                theme_style_for_accent(accent).unwrap_or_else(|| accent.fallback_style()),
-            )
+            accent.forced_style().unwrap_or_else(|| {
+                soften_status_line_style(
+                    theme_style_for_accent(accent).unwrap_or_else(|| accent.fallback_style()),
+                )
+            })
         } else {
             Style::default().dim()
         };
@@ -263,6 +273,22 @@ mod tests {
         assert!(line.spans[1].style.add_modifier.contains(Modifier::DIM));
         assert_eq!(line.spans[2].style.fg, None);
         assert!(line.spans[2].style.add_modifier.contains(Modifier::DIM));
+    }
+
+    #[test]
+    fn status_line_limit_segments_stay_blue_with_theme_colors() {
+        let line = status_line_from_segments_with_resolver(
+            [(
+                StatusLineItem::FiveHourLimit,
+                "5h [████] 20% left".to_string(),
+            )],
+            /*use_theme_colors*/ true,
+            |_| Some(Style::default().red()),
+        )
+        .expect("status line");
+
+        assert_eq!(line.spans[0].style.fg, Some(Color::Blue));
+        assert!(!line.spans[0].style.add_modifier.contains(Modifier::DIM));
     }
 
     #[test]

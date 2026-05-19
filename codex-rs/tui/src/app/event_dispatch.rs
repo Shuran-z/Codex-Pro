@@ -724,29 +724,35 @@ impl App {
                 self.chat_widget
                     .finish_add_credits_nudge_email_request(result);
             }
-            AppEvent::RateLimitsLoaded { origin, result } => match result {
-                Ok(snapshots) => {
-                    for snapshot in snapshots {
-                        self.chat_widget.on_rate_limit_snapshot(Some(snapshot));
-                    }
-                    match origin {
-                        RateLimitRefreshOrigin::StartupPrefetch => {
-                            tui.frame_requester().schedule_frame();
+            AppEvent::RateLimitsLoaded { origin, result } => {
+                if origin.is_background() {
+                    self.rate_limit_background_refresh_pending = false;
+                }
+                match result {
+                    Ok(snapshots) => {
+                        for snapshot in snapshots {
+                            self.chat_widget.on_rate_limit_snapshot(Some(snapshot));
                         }
-                        RateLimitRefreshOrigin::StatusCommand { request_id } => {
+                        match origin {
+                            RateLimitRefreshOrigin::StartupPrefetch
+                            | RateLimitRefreshOrigin::PeriodicRefresh => {
+                                tui.frame_requester().schedule_frame();
+                            }
+                            RateLimitRefreshOrigin::StatusCommand { request_id } => {
+                                self.chat_widget
+                                    .finish_status_rate_limit_refresh(request_id);
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        tracing::warn!("account/rateLimits/read failed during TUI refresh: {err}");
+                        if let RateLimitRefreshOrigin::StatusCommand { request_id } = origin {
                             self.chat_widget
                                 .finish_status_rate_limit_refresh(request_id);
                         }
                     }
                 }
-                Err(err) => {
-                    tracing::warn!("account/rateLimits/read failed during TUI refresh: {err}");
-                    if let RateLimitRefreshOrigin::StatusCommand { request_id } = origin {
-                        self.chat_widget
-                            .finish_status_rate_limit_refresh(request_id);
-                    }
-                }
-            },
+            }
             AppEvent::ConnectorsLoaded { result, is_final } => {
                 self.chat_widget.on_connectors_loaded(result, is_final);
             }

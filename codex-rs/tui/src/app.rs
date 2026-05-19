@@ -222,6 +222,7 @@ use self::thread_events::*;
 
 const EXTERNAL_EDITOR_HINT: &str = "Save and close external editor to continue.";
 const THREAD_EVENT_CHANNEL_CAPACITY: usize = 32768;
+const RATE_LIMIT_BACKGROUND_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 
 enum ThreadInteractiveRequest {
     AppLink(AppLinkViewParams),
@@ -528,6 +529,7 @@ pub(crate) struct App {
     primary_session_configured: Option<ThreadSessionState>,
     pending_primary_events: VecDeque<ThreadBufferedEvent>,
     pending_app_server_requests: PendingAppServerRequests,
+    rate_limit_background_refresh_pending: bool,
     // Serialize plugin enablement writes per plugin so stale completions cannot
     // overwrite a newer toggle, even if the plugin is toggled from different
     // cwd contexts.
@@ -938,6 +940,7 @@ See the Codex keymap documentation for supported actions and examples."
             primary_session_configured: None,
             pending_primary_events: VecDeque::new(),
             pending_app_server_requests: PendingAppServerRequests::default(),
+            rate_limit_background_refresh_pending: false,
             pending_plugin_enabled_writes: HashMap::new(),
             pending_hook_enabled_writes: HashMap::new(),
         };
@@ -984,6 +987,14 @@ See the Codex keymap documentation for supported actions and examples."
 
         let tui_events = tui.event_stream();
         tokio::pin!(tui_events);
+
+        let refresh_rate_limits_periodically = requires_openai_auth && has_chatgpt_account;
+        let mut rate_limit_background_refresh_interval = tokio::time::interval_at(
+            tokio::time::Instant::now() + RATE_LIMIT_BACKGROUND_REFRESH_INTERVAL,
+            RATE_LIMIT_BACKGROUND_REFRESH_INTERVAL,
+        );
+        rate_limit_background_refresh_interval
+            .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
         tui.frame_requester().schedule_frame();
         app.refresh_startup_skills(&app_server);
@@ -1067,6 +1078,10 @@ See the Codex keymap documentation for supported actions and examples."
                                 tracing::warn!("app-server event stream closed");
                             }
                         }
+                        AppRunControl::Continue
+                    }
+                    _ = rate_limit_background_refresh_interval.tick(), if refresh_rate_limits_periodically => {
+                        app.refresh_rate_limits(&app_server, RateLimitRefreshOrigin::PeriodicRefresh);
                         AppRunControl::Continue
                     }
                 };
