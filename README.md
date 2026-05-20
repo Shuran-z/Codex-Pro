@@ -4,6 +4,8 @@
 
 上游项目仍然是 OpenAI Codex CLI；本仓库不是官方发布渠道。如果你只想安装官方 Codex，请使用官方 npm/Homebrew/Release。这里的说明只针对 `Shuran-z/Codex-Pro` 这个仓库。
 
+当前定制基线：OpenAI Codex CLI `0.132.0`（上游标签 `rust-v0.132.0`）。
+
 ## 功能
 
 - 底部状态栏显示当前模型、额度和上下文等信息。
