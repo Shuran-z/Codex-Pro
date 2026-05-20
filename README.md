@@ -1,60 +1,159 @@
-<p align="center"><code>npm i -g @openai/codex</code><br />or <code>brew install --cask codex</code></p>
-<p align="center"><strong>Codex CLI</strong> is a coding agent from OpenAI that runs locally on your computer.
-<p align="center">
-  <img src="https://github.com/openai/codex/blob/main/.github/codex-cli-splash.png" alt="Codex CLI splash" width="80%" />
-</p>
-</br>
-If you want Codex in your code editor (VS Code, Cursor, Windsurf), <a href="https://developers.openai.com/codex/ide">install in your IDE.</a>
-</br>If you want the desktop app experience, run <code>codex app</code> or visit <a href="https://chatgpt.com/codex?app-landing-page=true">the Codex App page</a>.
-</br>If you are looking for the <em>cloud-based agent</em> from OpenAI, <strong>Codex Web</strong>, go to <a href="https://chatgpt.com/codex">chatgpt.com/codex</a>.</p>
+# Codex-Pro
 
----
+`Codex-Pro` 是基于 OpenAI Codex CLI 的自用增强版，重点改的是终端 TUI 底部状态栏和本地使用体验。
 
-## Quickstart
+上游项目仍然是 OpenAI Codex CLI；本仓库不是官方发布渠道。如果你只想安装官方 Codex，请使用官方 npm/Homebrew/Release。这里的说明只针对 `Shuran-z/Codex-Pro` 这个仓库。
 
-### Installing and running Codex CLI
+## 功能
 
-Install globally with your preferred package manager:
+- 底部状态栏显示当前模型、额度和上下文等信息。
+- 额度显示加入进度条和剩余百分比，例如 `5h [████░░░░] 80% left`。
+- 额度进度条改为蓝色，不再使用醒目的红色。
+- 额度信息会近似实时刷新：登录 ChatGPT/OpenAI 账号后，TUI 后台约每 60 秒请求一次额度数据。
+- 后台额度刷新有并发保护，慢请求不会堆积。
+- 支持从底部状态栏切换模型：启用鼠标模式后，点击左下角模型名称即可打开模型选择器。
+- 模型选择器沿用原有快捷键，按 `Esc` 退出。
+- 默认保持终端文本复制可用，不会强行开启鼠标捕获。
+- CI 已简化为适合本 fork 的 Rust 格式检查和 CLI 构建检查。
 
-```shell
-# Install using npm
-npm install -g @openai/codex
+## 下载
+
+目前本仓库还没有预编译 Release 包。你可以用下面两种方式下载源码。
+
+### 方式一：clone 仓库
+
+```bash
+git clone https://github.com/Shuran-z/Codex-Pro.git
+cd Codex-Pro
 ```
 
-```shell
-# Install using Homebrew
-brew install --cask codex
+### 方式二：下载 ZIP
+
+打开仓库页面：
+
+```text
+https://github.com/Shuran-z/Codex-Pro
 ```
 
-Then simply run `codex` to get started.
+点击 `Code` -> `Download ZIP`。
 
-<details>
-<summary>You can also go to the <a href="https://github.com/openai/codex/releases/latest">latest GitHub Release</a> and download the appropriate binary for your platform.</summary>
+也可以直接下载 main 分支源码：
 
-Each GitHub Release contains many executables, but in practice, you likely want one of these:
+```text
+https://github.com/Shuran-z/Codex-Pro/archive/refs/heads/main.zip
+```
 
-- macOS
-  - Apple Silicon/arm64: `codex-aarch64-apple-darwin.tar.gz`
-  - x86_64 (older Mac hardware): `codex-x86_64-apple-darwin.tar.gz`
-- Linux
-  - x86_64: `codex-x86_64-unknown-linux-musl.tar.gz`
-  - arm64: `codex-aarch64-unknown-linux-musl.tar.gz`
+## 构建
 
-Each archive contains a single entry with the platform baked into the name (e.g., `codex-x86_64-unknown-linux-musl`), so you likely want to rename it to `codex` after extracting it.
+进入 Rust workspace：
 
-</details>
+```bash
+cd codex-rs
+```
 
-### Using Codex with your ChatGPT plan
+建议使用 Rust `1.93.0` 或更新版本。Linux 上通常还需要 OpenSSL 开发包：
 
-Run `codex` and select **Sign in with ChatGPT**. We recommend signing into your ChatGPT account to use Codex as part of your Plus, Pro, Business, Edu, or Enterprise plan. [Learn more about what's included in your ChatGPT plan](https://help.openai.com/en/articles/11369540-codex-in-chatgpt).
+```bash
+# Debian / Ubuntu
+sudo apt-get update
+sudo apt-get install -y pkg-config libssl-dev
+```
 
-You can also use Codex with an API key, but this requires [additional setup](https://developers.openai.com/codex/auth#sign-in-with-an-api-key).
+然后构建：
 
-## Docs
+```bash
+cargo build -p codex-cli --bin codex --release
+```
 
-- [**Codex Documentation**](https://developers.openai.com/codex)
-- [**Contributing**](./docs/contributing.md)
-- [**Installing & building**](./docs/install.md)
-- [**Open source fund**](./docs/open-source-fund.md)
+构建完成后的二进制在：
 
-This repository is licensed under the [Apache-2.0 License](LICENSE).
+```text
+codex-rs/target/release/codex
+```
+
+可以直接运行：
+
+```bash
+./target/release/codex
+```
+
+## 安装到本机
+
+如果你已经通过 npm 安装了官方 Codex，并想把本 fork 编译出来的二进制替换进去，可以参考下面流程。
+
+先确认当前 `codex` 来自哪里：
+
+```bash
+which codex
+codex --version
+```
+
+构建本 fork：
+
+```bash
+cd codex-rs
+cargo build -p codex-cli --bin codex --release
+```
+
+然后把 `target/release/codex` 复制到你本机 npm Codex 的 native binary 路径。不同机器路径可能不同，本机这次使用的路径是：
+
+```text
+~/.npm-global/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex/codex
+```
+
+建议先备份原二进制：
+
+```bash
+cp -p <installed-codex-binary> <installed-codex-binary>.backup
+install -m 755 codex-rs/target/release/codex <installed-codex-binary>.new
+mv <installed-codex-binary>.new <installed-codex-binary>
+```
+
+替换后验证：
+
+```bash
+codex --version
+```
+
+## 使用
+
+普通启动：
+
+```bash
+codex
+```
+
+默认模式保留终端拖选复制能力。
+
+如果想点击底部模型名称切换模型，启动时开启鼠标模式：
+
+```bash
+CODEX_TUI_MOUSE=1 codex
+```
+
+然后点击底部状态栏里的模型名称打开模型选择器，按 `Esc` 退出。
+
+注意：标准终端鼠标上报是整个窗口级别开关，不支持“只监听最下面一行”。因此本 fork 默认不开启鼠标捕获，避免影响上方聊天记录复制。开启 `CODEX_TUI_MOUSE=1` 后，部分终端需要按住 `Shift` 才能拖选复制文本。
+
+## CI
+
+当前启用的 GitHub Actions workflow：
+
+```text
+.github/workflows/codex-pro-ci.yml
+```
+
+它会检查：
+
+- `cargo fmt --check`
+- `cargo check -p codex-cli --bin codex`
+
+上游不适合本 fork 的 workflow 已移动到：
+
+```text
+.github/workflows.upstream-disabled
+```
+
+## License
+
+本仓库继承上游许可证，详见 [LICENSE](LICENSE)。
